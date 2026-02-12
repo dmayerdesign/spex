@@ -1,9 +1,17 @@
 ---
 description: "Implement the next build step from the design using TDD"
-tools: ["search/codebase"]
+tools:
+    - vscode
+    - execute
+    - read
+    - agent
+    - edit
+    - search
+    - web
+    - todo
 ---
 
-Use the spex-implement skill in [SKILL.md](../../.github/skills/spex-implement/SKILL.md).
+Use the spex-implement skill in [SKILL.md](../skills/spex-implement/SKILL.md).
 
 Read [AGENTS.md](../../AGENTS.md) to understand the spec-as-source workflow and precedence hierarchy.
 
@@ -11,7 +19,7 @@ Read spec.md and design.md first. The spec is the authority on behavior; the des
 
 If there is existing code, read it to understand patterns and conventions before adding to it. Run the existing test suite — it must pass before you start.
 
-The user may specify a feature or some component therein to implement. Otherwise, identify the next unfinished step in the design's build sequence.
+The user may specify a build step number or component to implement. Otherwise, identify the next unfinished step in the design's build sequence.
 
 Follow TDD for each piece of functionality:
 

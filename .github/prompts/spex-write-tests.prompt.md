@@ -1,9 +1,16 @@
 ---
 description: "Write or update tests that verify spec scenarios"
-tools: ["search/codebase"]
+tools:
+    - vscode
+    - execute
+    - read
+    - agent
+    - edit
+    - search
+    - todo
 ---
 
-Use the spex-write-tests skill in [SKILL.md](../../.github/skills/spex-write-tests/SKILL.md).
+Use the spex-write-tests skill in [SKILL.md](../skills/spex-write-tests/SKILL.md).
 
 Read [AGENTS.md](../../AGENTS.md) to understand the spec-as-source workflow and precedence hierarchy.
 

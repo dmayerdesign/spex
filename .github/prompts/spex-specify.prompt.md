@@ -1,9 +1,17 @@
 ---
 description: "Write or update a behavioral spec (spec.md) for a feature"
-tools: ["search/codebase"]
+tools:
+    - vscode
+    - execute
+    - read
+    - agent
+    - edit
+    - search
+    - web
+    - todo
 ---
 
-Use the spex-specify skill in [SKILL.md](../../.github/skills/spex-specify/SKILL.md).
+Use the spex-specify skill in [SKILL.md](../skills/spex-specify/SKILL.md).
 
 Read [AGENTS.md](../../AGENTS.md) to understand the spec-as-source workflow and precedence hierarchy.
 

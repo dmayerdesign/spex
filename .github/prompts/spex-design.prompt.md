@@ -1,9 +1,17 @@
 ---
 description: "Create or update a design document (design.md) from the spec"
-tools: ["search/codebase"]
+tools:
+    - vscode
+    - execute
+    - read
+    - agent
+    - edit
+    - search
+    - web
+    - todo
 ---
 
-Use the spex-design skill in [SKILL.md](../../.github/skills/spex-design/SKILL.md).
+Use the spex-design skill in [SKILL.md](../skills/spex-design/SKILL.md).
 
 Read [AGENTS.md](../../AGENTS.md) to understand the spec-as-source workflow and precedence hierarchy.
 
