@@ -12,6 +12,6 @@ The emerging practice of spec-driven development, and its most hardcore variatio
 ## Setup for Claude Code
 
 1. Copy this AGENTS.md into your project
-2. Copy these `.claude/prompts/` and `.claude/skills/` folders into your project's `.claude/` folder
+2. Copy these `.claude/commands/` and `.claude/skills/` folders into your project's `.claude/` folder
 3. Restart your Claude Code environment
-4. Now you can use the slash commands starting with `/spex-`
+4. Now you can use the slash commands starting with `/spex:`
