@@ -3,218 +3,92 @@ name: spex-write-tests
 description: "Add concise but thorough test coverage where needed, ensuring each test links back to one or more scenarios in the spec. Use this skill when the user wants to add, improve, or review tests for code that has a behavioral spec. Triggers include: 'write tests', 'add test coverage', 'test this', 'are there enough tests', 'cover these scenarios', or any request to verify that implemented code satisfies the spec's scenarios. Also use when the user asks to check which scenarios are untested or wants to understand the relationship between tests and spec. Do NOT use for writing specs (use spex-specify), creating designs (use spex-design), or implementing features (use spex-implement)."
 ---
 
-# Writing Tests That Trace to Scenarios
+# Writing Tests
 
 ## Overview
 
-Tests verify that the implementation satisfies the spec. Every test should trace back to one or more scenarios in the spec, and every scenario in the spec should be covered by at least one test. This bidirectional traceability is the core discipline — it ensures tests are meaningful (they verify real behavior) and complete (no specified behavior goes unverified).
+Tests sit at the third level of the precedence hierarchy: **spec.md → design.md → tests → implementation**. Tests translate the spec's scenarios into executable verification. Each test should trace to one or more scenarios in the spec — if a test doesn't correspond to a scenario, question whether it's needed. If a scenario doesn't have a test, that's a gap.
 
-## What Makes Good Tests
+In a spex project, tests are written _before_ the code they verify. The implementation skill (`spex-implement`) follows a TDD workflow: it calls this skill to write a failing test, then writes code to make it pass. Tests are the mechanism that connects the spec's behavioral promises to the actual code.
 
-Good tests:
-- **Map clearly to scenarios.** You can look at any test and point to the scenario it verifies. You can look at any scenario and find the tests that cover it.
-- **Test behavior, not implementation.** They verify *what* happens, not *how* it happens internally. They don't break when you refactor.
-- **Are independent.** Each test sets up its own state, runs, and cleans up. No test depends on another test running first.
-- **Are readable.** Someone unfamiliar with the code can read a test and understand what behavior it's verifying.
-- **Fail for the right reason.** When a test fails, the failure message tells you which behavior broke, not just which assertion didn't hold.
+## Before You Start
 
-Bad tests:
-- **Test implementation details.** Verifying that a specific private method was called, or that an internal data structure has a specific shape.
-- **Don't link to scenarios.** "test_function_works" tells you nothing about what behavior is covered.
-- **Are fragile.** Break when you rename a variable, reorder fields, or refactor without changing behavior.
-- **Are redundant.** Multiple tests verifying the same scenario in the same way.
-- **Are incomplete.** Cover only the happy path when the spec has error scenarios too.
+1. **Read the spec.** Every scenario is a candidate for one or more tests. You need to understand the behaviors, not just the function signatures.
+2. **Read the design.** The component breakdown and interface definitions tell you _where_ to test and _what the boundaries are_. The design's interfaces are your test surfaces.
+3. **Check what's already tested.** If there's an existing test suite, understand its structure, conventions, and coverage before adding to it. Match the existing style.
+4. **Confirm the test infrastructure.** The test runner should already be set up (this happens in Step 1 of `spex-implement`). If it's not, set it up before writing any tests.
 
-## Test Structure
+## Principles
 
-### Naming Convention
+### Every Test Traces to a Scenario
 
-Test names encode the scenario they verify. Use this pattern:
+Name tests after the scenario they verify. If the spec has "Applying an expired discount code," the test should be named something like `test_applying_expired_discount_code_returns_error`. A reader should be able to map any test back to the spec without guessing.
 
-```
-test_<scenario_name_in_snake_case>
-```
+If you find yourself writing a test that doesn't correspond to any scenario — a test for an internal helper, a defensive check against an edge case the spec doesn't mention — pause. It might be legitimate (infrastructure glue needs testing too), but it should be the exception, not the pattern. Most tests should be traceable.
 
-The name should match or closely paraphrase the scenario name from the spec. If a scenario is "Applying an expired discount code," the test is:
+### Test Behavior, Not Implementation
 
-```python
-def test_applying_an_expired_discount_code():
-    ...
-```
+Tests verify _what_ happens, not _how_ it happens internally. Test inputs and outputs through the component's public interface, as defined in the design. Don't reach into private state, mock internal collaborators unnecessarily, or assert on implementation details that could change without affecting behavior.
 
-```javascript
-test('applying an expired discount code', () => {
-    ...
-});
-```
+A good test breaks only when the behavior changes. A brittle test breaks when the code is refactored but the behavior is identical. Aim for the former.
 
-This naming convention is the primary traceability mechanism. Someone reading the test file should be able to mentally map each test back to the spec without any additional documentation.
+### One Behavior Per Test
 
-### Test Body: Arrange / Act / Assert
+Each test should verify one scenario or one specific aspect of a scenario. If a test has multiple unrelated assertions, split it. When a test fails, the name and the failure should tell you exactly which behavior is broken.
 
-Each test follows the same three-phase structure that mirrors given/when/then:
+Complex scenarios can span multiple tests — "Completing a checkout" might need separate tests for inventory deduction, order creation, and confirmation email. But each test should be independently meaningful.
 
-```
-Arrange  →  set up the preconditions           (maps to Given)
-Act      →  perform the action                  (maps to When)
-Assert   →  verify the outcome                  (maps to Then)
-```
+### Happy Path First, Then Errors
 
-Separate these phases visually with blank lines. This makes the mapping to the scenario explicit:
+Mirror the spec's structure: write tests for the happy-path scenarios first, then the error scenarios. This matches the order the implementer will work in during TDD — get the core behavior working, then handle the ways it can fail.
 
-```python
-def test_applying_a_percentage_discount_code():
-    # Given the cart contains items totaling $10.50
-    cart = create_cart_with_items([
-        ("Sourdough Bread", 6.00),
-        ("Oat Milk", 4.50),
-    ])
+Error scenarios in the spec are first-class requirements. Each one gets its own test with the same care as the happy path. "Applying an expired discount code" is not a lesser test than "Applying a valid discount code."
 
-    # When the customer applies discount code "SAVE20"
-    result = cart.apply_discount("SAVE20")
+### Keep Tests Fast and Independent
 
-    # Then the cart total shows $8.40 and the discount line is correct
-    assert result.total == 8.40
-    assert result.discount_line == "SAVE20: -$2.10"
-```
+Tests should run quickly and in any order. No test should depend on another test's side effects. Each test sets up its own state (the "Given"), performs the action (the "When"), and checks the outcome (the "Then") — mirroring the scenario format from the spec.
 
-The `# Given / # When / # Then` comments are optional but helpful, especially when the mapping isn't immediately obvious.
-
-### Scenario Coverage Tag
-
-At the top of each test file (or test class), include a coverage summary that maps scenarios to tests. This serves as a quick-reference index:
-
-```python
-"""
-Scenario Coverage:
-- "Adding an in-stock item to the cart"       → test_adding_an_in_stock_item
-- "Adding an out-of-stock item to the cart"   → test_adding_an_out_of_stock_item
-- "Removing an item from the cart"            → test_removing_an_item
-- "Applying a percentage discount code"       → test_applying_a_percentage_discount_code
-- "Applying an expired discount code"         → test_applying_an_expired_discount_code
-"""
-```
-
-This header makes it trivially easy to audit coverage: if a scenario from the spec isn't listed, it's not tested.
+If setup is complex, extract shared helpers or fixtures, but keep the test body readable. A reader should understand what a test does without chasing through layers of abstraction.
 
 ## Workflow
 
-### Step 1: Read the Spec and Map Scenarios
+### Step 1: Map Scenarios to Tests
 
-Before writing any test, read the full spec and list every scenario. Then check which scenarios already have tests (if any code/tests exist). The gap between "scenarios in the spec" and "scenarios with tests" is your work list.
+Read the spec and list every scenario. For each one, determine:
 
-Produce a coverage checklist (mentally or in writing):
+- **What component does this test exercise?** The design's component breakdown tells you this.
+- **What's the test surface?** Use the interface defined in the design — public function, API endpoint, CLI command.
+- **How many tests does this scenario need?** Usually one, but complex scenarios with multiple distinct outcomes may need several.
 
-```
-[x] Adding an in-stock item           — test exists in test_cart.py
-[ ] Adding an out-of-stock item        — NO TEST
-[x] Removing an item                   — test exists in test_cart.py
-[ ] Applying a percentage discount     — NO TEST
-[ ] Applying an expired discount       — NO TEST
-```
+This mapping is the test plan. If you notice scenarios that the design's components can't exercise through their interfaces, flag it — the design may need adjustment (using `spex-design`).
 
-### Step 2: Read the Implementation
+### Step 2: Write Tests for the Current Build Step
 
-Understand how the code is structured before writing tests. You need to know:
-- What functions/methods to call in your tests
-- What setup is required (database, fixtures, mocks)
-- What the return types and error types look like
-- What testing patterns the codebase already uses (if any tests exist)
+During TDD, you're writing tests for the build step currently being implemented. Don't write tests for steps that haven't been built yet — the code they'd test doesn't exist, and the interfaces may shift.
 
-If tests already exist, match their style and conventions. If not, choose a testing framework appropriate for the language and stack, and establish simple conventions.
+For the current step, write tests in this order:
 
-### Step 3: Write Tests for Uncovered Scenarios
+1. **Core logic / happy path** — the main behavior the step adds.
+2. **Variations** — different inputs, boundary values, alternate flows described in the spec.
+3. **Error cases** — the error scenarios from the spec that this step's components handle.
 
-For each uncovered scenario, write one test (sometimes more if a scenario has multiple important variants). Follow the naming convention and arrange/act/assert structure.
+Run each test after writing it. It should fail (red). Hand off to `spex-implement` to make it pass.
 
-**Start with happy-path scenarios**, then error cases, then edge cases. This matches the natural priority: core behavior first, failure modes second, boundary conditions third.
+### Step 3: Verify Coverage Against the Spec
 
-**One scenario = one test (usually).** If a scenario has multiple "And then" clauses, it's fine for one test to verify all of them. Don't split a single scenario into multiple tests — that fragments the traceability.
+After a build step is complete (tests passing, build green), check: are all the scenarios this step claims to satisfy actually tested? Walk through the spec's scenarios for this step and confirm each has a corresponding test.
 
-**Occasionally one scenario needs multiple tests** if the given/when/then describes a category of behavior with meaningfully different inputs. For example, if the spec says "applying a discount code" and the design reveals both percentage and fixed-amount discounts, you might write:
+If the full implementation is complete, do a final coverage check across the entire spec. Every scenario should have at least one test. Document any gaps — either write the missing tests or flag scenarios that turned out to be untestable and need spec clarification (using `spex-specify`).
 
-```python
-def test_applying_a_percentage_discount_code():
-    ...
+## Resolving Conflicts
 
-def test_applying_a_fixed_amount_discount_code():
-    ...
-```
+Apply the precedence hierarchy: **spec → design → tests → implementation.**
 
-Both trace to the same scenario (or closely related scenarios) and that's fine. The key is that the mapping remains clear.
-
-### Step 4: Write Helpers, Not Frameworks
-
-If multiple tests need similar setup, extract helper functions. Keep them simple and specific:
-
-```python
-def create_cart_with_items(items):
-    """Helper: creates a cart and adds items. Each item is (name, price)."""
-    cart = Cart.create(customer_id="test-customer")
-    for name, price in items:
-        cart.add_item(product_name=name, unit_price=price, quantity=1)
-    return cart
-```
-
-**Don't build a test framework.** Helpers should be plain functions that set up state. Avoid:
-- Abstract base test classes with complex inheritance
-- Custom assertion libraries
-- "Smart" fixtures that auto-discover and auto-configure
-- Data-driven test generators (unless you have dozens of trivially similar cases)
-
-Keep the test code boring and explicit. Test code is documentation — clarity trumps DRYness.
-
-### Step 5: Verify Tests Pass and Fail Correctly
-
-After writing tests:
-
-1. **Run them and confirm they pass.** If a test fails, either the test is wrong or the implementation has a bug. Investigate and fix the right one.
-2. **Intentionally break the implementation and confirm the relevant test fails.** This validates that the test is actually testing what you think it is. A test that passes regardless of what the code does is worse than no test — it provides false confidence.
-3. **Check the failure message.** When a test fails, does the message clearly indicate which behavior broke? If the message is cryptic, improve the assertion or add a message:
-
-```python
-assert result.total == 8.40, (
-    f"Expected discounted total of 8.40, got {result.total}. "
-    f"Discount may not have been applied correctly."
-)
-```
-
-### Step 6: Update the Coverage Header
-
-After writing all tests, update the scenario coverage summary at the top of the test file. Confirm every scenario from the spec is listed with its corresponding test.
-
-## Test Levels
-
-### Unit Tests (Most Tests Live Here)
-
-Test individual functions and methods in isolation. Mock or stub external dependencies (databases, APIs, file systems) so tests are fast and focused.
-
-Unit tests map most naturally to scenarios because they verify specific behaviors with specific inputs and outputs — exactly what scenarios describe.
-
-### Integration Tests (Use Sparingly, Targeted)
-
-Test that components work together correctly. Use these for:
-- Scenarios that span multiple components (like the checkout flow)
-- Data model scenarios (can you actually save and retrieve entities?)
-- API contract scenarios (does the endpoint accept and return what the spec implies?)
-
-Integration tests are slower and more complex. Write them for cross-component scenarios, but don't duplicate what unit tests already cover.
-
-### End-to-End Tests (Rare, High-Value Only)
-
-Test the full stack from UI to database. Reserve these for the most critical happy-path scenarios — the flows that absolutely must work. If the spec has a core workflow (browse → cart → checkout → confirmation), one or two E2E tests covering that flow are valuable. Don't E2E-test every scenario.
-
-## What Not to Test
-
-- **Implementation details.** Don't test that a private method is called, or that an internal cache has a specific structure. Test the observable behavior.
-- **Third-party libraries.** Don't test that your database driver can insert a row. Test that *your code* correctly uses the driver to satisfy a scenario.
-- **Scenarios that don't exist in the spec.** If you find yourself writing a test for behavior that isn't in any scenario, either the spec has a gap (flag it) or you're testing something that doesn't matter (skip it).
+- **Test contradicts the spec:** fix the test. The spec is the authority on behavior.
+- **Test contradicts the design's interface:** usually fix the test to match the design. But if the test is encoding a spec requirement the design missed, flag it so the design can be updated (using `spex-design`).
+- **Test is hard to write against the current design:** this often means the component boundaries are wrong — the design needs adjustment, not a hacky test. Flag it rather than working around it.
+- **Unsure what the expected behavior is:** go back to the spec. If the spec is ambiguous, ask the developer. Don't encode a guess as a test — a wrong test is worse than a missing one.
 
 ## Output
 
-Tests are saved as test files in the appropriate location for the project (e.g., `tests/`, `__tests__/`, `*_test.go`, etc.). After writing tests:
-
-- All tests pass when run
-- The scenario coverage header is present and complete
-- Test names clearly correspond to scenario names
-- The test file is readable as a standalone document of the system's expected behavior
+Test files organized to match the project's conventions, containing tests that are named after spec scenarios, test behavior through public interfaces, run fast and independently, and collectively cover every scenario in the spec. After writing tests, verify the test suite runs (even if new tests fail because the code isn't written yet — that's expected in TDD).

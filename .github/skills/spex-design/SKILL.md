@@ -3,288 +3,98 @@ name: spex-design
 description: "Create a detailed plan for implementing the spec. Use this skill when a behavioral spec (scenarios in given/when/then form) already exists and the user wants to plan how to build it before writing code. Triggers include: 'design this', 'plan the implementation', 'how should we build this', 'create an architecture', 'what's the technical approach', or any request to bridge the gap between a spec and code. Also use when the user has a spec and asks about technology choices, component structure, data modeling, or sequencing of work. Do NOT use for writing the spec itself (use spex-specify), writing code (use spex-implement), or writing tests (use spex-write-tests)."
 ---
 
-# Designing an Implementation Plan
+# Designing from a Spec
 
 ## Overview
 
-A design takes a behavioral spec (scenarios in given/when/then form) and produces a concrete plan for building it. The design answers "how will we build this?" while the spec answers "what should it do?" The design is the bridge between the two — detailed enough that implementation becomes a matter of execution rather than invention.
+A design document bridges _what_ the software does (the spec) and _how_ it gets built (the implementation). It sits at the second level of the precedence hierarchy: **spec.md → design.md → tests → implementation**. The spec is the authority on behavior; the design is the authority on structure. If they conflict, the spec wins.
 
-## What Makes a Good Design
+The design's primary audience is the agent or developer who will implement it using `spex-implement` with a TDD workflow. A good design makes implementation mechanical: follow the build sequence step by step, writing tests (via `spex-write-tests`) and code for each step, without needing to make architectural decisions on the fly.
 
-A design is good when:
-- Every scenario in the spec has a clear path to being satisfied
-- A developer can pick up any section and start building without needing to make architectural decisions
-- Technology choices are justified, not just stated
-- The sequencing makes sense — earlier pieces don't depend on later ones
-- It's honest about tradeoffs and what it's punting on
+## Before You Start
 
-A design is bad when:
-- It restates the spec in technical language without adding anything
-- It makes technology choices without explaining why
-- It describes a perfect end-state but gives no clue how to get there incrementally
-- It's so abstract that two developers would build completely different things from it
-- It ignores the constraints implied by the scenarios (performance, concurrency, etc.)
+1. **Read every scenario in the spec.** Pay special attention to error scenarios and edge cases — they drive component boundaries more than happy paths do.
+2. **Extract the nouns and verbs.** The spec's vocabulary becomes your entity and component names. This is not optional.
+3. **Note technology constraints** the developer has specified. If none, you'll recommend and justify.
+4. **Check for existing code.** Don't design a greenfield architecture for a brownfield project.
 
-## Design Structure
+## Design Principles
 
-### 1. Summary
+### Use the Spec's Vocabulary
 
-2-4 sentences. What are we building, what's the core technical approach, and what's the most important architectural decision?
+If the spec says "cart," your design has a Cart entity, a CartService, and a cart table. Don't rename things to fit a pattern. The vocabulary flows downward: spec → design → tests → code.
 
-```markdown
-## Summary
+### Every Component Traces to Scenarios
 
-FreshCart is a web application with a React frontend and a Node.js API server
-backed by PostgreSQL. The core architectural decision is to treat the cart as
-a server-side resource (not purely client-side) so that pricing, inventory
-checks, and discount logic are authoritative. Delivery window availability is
-managed through a slot-reservation system with optimistic locking to handle
-concurrent checkouts.
-```
+If you can't name the scenario that requires a component, it probably shouldn't exist. If you find yourself designing something no scenario motivates — an admin panel, a caching layer — flag it to the developer rather than including it. The right response to a gap is to update the spec (using `spex-specify`), not to silently expand scope.
 
-### 2. Scenario-to-Component Map
+### Design for Testability
 
-This is the most important section. For every scenario (or group of closely related scenarios) in the spec, name the components involved and sketch the interaction. This creates explicit traceability from behavior to implementation.
+Implementation will be test-driven. Your design must make that practical:
 
-```markdown
-## Scenario Map
+- Components should have **clear interfaces** with well-defined inputs and outputs.
+- **Business logic should be separable from infrastructure** — core rules in pure components, I/O at the edges.
+- The **build sequence should produce testable increments** — each step adds functionality that can be verified before the next step begins.
 
-### "Adding an in-stock item to the cart"
-- **UI**: ProductCard emits `add-to-cart` event → CartSidebar updates count
-- **API**: `POST /cart/items` — validates inventory, adds item, returns updated cart
-- **Data**: `cart_items` table (cart_id, product_id, quantity, unit_price)
-- **Key logic**: Inventory check is read-at-request-time, not reserved until checkout
+If you can't describe in a sentence how a component would be tested, its boundaries are wrong.
 
-### "Applying a percentage discount code"
-- **UI**: CartSidebar discount input → calls API → displays discount line
-- **API**: `POST /cart/discount` — validates code, calculates discount, returns updated totals
-- **Data**: `discount_codes` table (code, type, value, expires_at, usage_limit)
-- **Key logic**: Discount calculated server-side; cart total is never computed client-side
-```
+### Decide What the Spec Doesn't
 
-You don't need to list every field or every line of code. The goal is that someone reading the scenario can immediately see where in the codebase to look and what the data flow is.
+The spec is silent on persistence, transport, error propagation, concurrency, configuration, and external integrations. Make explicit decisions about each and write them down. Implicit decisions become inconsistent implementations.
 
-### 3. Data Model
+### Keep It Buildable in Order
 
-Define the core entities, their relationships, and the key fields. Focus on what's needed to satisfy the scenarios — don't model things that no scenario references.
+Each step in the build sequence must produce something that builds, can be tested, and works. If a step requires four other incomplete steps before anything is verifiable, the sequence is wrong.
 
-```markdown
-## Data Model
+### Avoid Over-Specification
 
-### Cart
-- id, customer_id, status (active | checked_out | abandoned), created_at
-- A customer has at most one active cart at a time
-
-### CartItem
-- cart_id, product_id, quantity, unit_price_at_addition
-- unit_price is captured at addition time (price may change later)
-
-### DiscountCode
-- code (unique), type (percentage | fixed), value, expires_at, usage_limit, times_used
-```
-
-Guidelines:
-- Name entities using the vocabulary from the spec, not generic database jargon
-- Call out important constraints inline ("at most one active cart")
-- Note any denormalization and why it exists ("price captured at addition time because...")
-- If using a non-relational store, describe the document/key structure instead
-
-### 4. Component Breakdown
-
-List the major components/modules and what each one is responsible for. This isn't a class diagram — it's a responsibility map.
-
-```markdown
-## Components
-
-### CartService
-Owns all cart mutation logic: add item, remove item, apply discount, calculate totals.
-All pricing logic lives here — the frontend never computes prices.
-
-### InventoryService
-Checks and reserves stock. Read-time checks for cart additions; hard reservation at checkout.
-Exposes: `checkAvailability(productId, quantity)`, `reserve(items[])`, `release(reservationId)`
-
-### DeliverySlotManager
-Manages 2-hour delivery windows. Handles slot availability queries and optimistic-lock reservations.
-A slot reservation expires after 10 minutes if checkout isn't completed.
-
-### CheckoutOrchestrator
-Coordinates the checkout flow: validate cart → reserve inventory → reserve delivery slot → process payment → confirm order.
-If any step fails, it unwinds previous steps (saga pattern).
-```
-
-### 5. Technology Choices
-
-State what you're using and why. Link choices back to scenarios or constraints when possible.
-
-```markdown
-## Technology Choices
-
-| Choice | Rationale |
-|--------|-----------|
-| React + TypeScript | User asked for a web app; TypeScript catches type errors in cart/pricing logic |
-| Node.js + Express | Matches frontend language; sufficient for expected throughput |
-| PostgreSQL | Relational model fits cart/order/inventory relationships; row-level locking for slot reservations |
-| Redis | Session storage + short-lived slot reservation locks |
-```
-
-Only include choices that matter. Don't list your linter or your test runner here unless the choice is non-obvious and worth justifying.
-
-### 6. Sequencing
-
-Break the build into ordered steps where each step produces something runnable or testable. This isn't a project plan with dates — it's a dependency-aware build order.
-
-```markdown
-## Build Sequence
-
-### Step 1: Cart basics
-Build: CartService, CartItem data model, `POST/DELETE /cart/items`, CartSidebar UI
-Satisfies: "Adding an in-stock item", "Removing an item from cart", "Viewing cart contents"
-Testable: Can add/remove items and see updated cart
-
-### Step 2: Pricing and discounts
-Build: Discount logic in CartService, DiscountCode model, discount API endpoint, discount UI
-Satisfies: "Applying a percentage discount", "Applying an expired discount code"
-Depends on: Step 1 (needs a cart with items)
-
-### Step 3: Inventory checks
-Build: InventoryService, inventory validation in add-to-cart flow
-Satisfies: "Adding an out-of-stock item", "Item going out of stock while in cart"
-Depends on: Step 1
-
-### Step 4: Delivery scheduling
-Build: DeliverySlotManager, slot selection UI, slot reservation
-Satisfies: "Selecting a delivery window", "Delivery window filling during checkout"
-Depends on: Step 1
-
-### Step 5: Checkout
-Build: CheckoutOrchestrator, payment integration, order confirmation
-Satisfies: "Completing a checkout", "Payment failure during checkout"
-Depends on: Steps 1-4
-```
-
-Guidelines:
-- Each step should reference the scenarios it satisfies
-- Each step should produce something that can be run or demonstrated
-- Earlier steps should have fewer dependencies
-- If two steps are independent, note that they can be done in parallel
-
-### 7. Open Questions and Risks
-
-Anything that came up during design that needs input, and any risks worth flagging.
-
-```markdown
-## Open Questions
-
-- The spec mentions "delivery zones" but doesn't define how they're determined. Is this zip-code-based? Radius from warehouse? This affects DeliverySlotManager significantly.
-- Discount stacking: the spec has scenarios for single discount codes but doesn't say whether multiple codes can be combined. Designed for single-code for now.
-
-## Risks
-
-- Optimistic locking on delivery slots could cause poor UX under high concurrency (many customers competing for the last slot in a window). May need a queue-based approach if this proves problematic.
-- Capturing `unit_price_at_addition` means price changes require a decision: update existing carts or not? Spec doesn't cover this. Designed for "price at addition stands" for now.
-```
+Favor bullet points, flowcharts, or pseudocode over code snippets.
+Favor qualitative descriptions over quantities, except when prescriptive precision is needed to avoid ambiguity.
 
 ## Workflow
 
-### Step 1: Read the Spec
+### Step 1: Extract the Entity Model
 
-Read the entire spec before designing anything. Look for:
-- **Implicit technical requirements**: scenarios about concurrent users imply locking or queuing. Scenarios about "real-time updates" imply websockets or polling. Scenarios about "within 2 seconds" imply performance constraints.
-- **Data relationships**: what entities exist? What references what? What's the cardinality?
-- **Workflow dependencies**: which scenarios describe steps in a sequence? This often maps to a service that orchestrates the sequence.
-- **Error scenarios**: these often reveal the hardest design problems (rollback, partial failure, retry).
+From the spec's scenarios, identify entities, their attributes, state transitions, and relationships. Use the spec's exact terminology. Don't invent entities the spec doesn't imply — note infrastructure entities separately and justify them.
 
-### Step 2: Draft the Scenario Map
+### Step 2: Define the Components
 
-Go through every scenario and sketch which components are involved. This is the most important step — it forces you to confront every behavior the system needs to support before committing to an architecture.
+Group related behaviors into components. For each one: name it from the spec's vocabulary, state its responsibility in one sentence, define its interface (what it accepts, what it returns, what errors it raises), and list the scenarios it serves. Separate business logic from infrastructure.
 
-If you find scenarios that don't map cleanly to any component, that's a signal you're missing a component. If you find a component that's involved in everything, it's probably too big and should be split.
+### Step 3: Choose the Technology
 
-### Step 3: Define the Data Model
+Language, framework (if any), data store, test framework, and external dependencies — each with rationale. Prefer boring technology. Include the test framework as a first-class choice, not an afterthought. Justify each external dependency; fewer is better.
 
-Derive the data model from the scenario map. Every entity in the model should be traceable to at least one scenario. If you're modeling something no scenario references, either the spec has a gap (flag it) or you're over-engineering (cut it).
+### Step 4: Design the Interfaces
 
-### Step 4: Define Components and Interactions
+Specify contracts in enough detail that the implementer doesn't guess: API endpoints with methods, paths, request/response shapes, and status codes; function signatures with parameters, return types, and errors; example payloads rather than abstract descriptions. These definitions are what `spex-write-tests` consumes directly — precision here makes tests easy to write.
 
-Group related logic into components. Each component should have a clear responsibility that you can state in one sentence. If you can't, it's doing too much.
+### Step 5: Plan the Build Sequence
 
-### Step 5: Choose Technologies
+This is the most critical section. Each step must:
 
-Make choices based on the constraints surfaced in earlier steps. Default to boring, well-understood technologies unless a scenario specifically demands something exotic.
+1. **Be testable on its own.** After completing it, the implementer writes and runs tests via `spex-write-tests`.
+2. **Build on previous steps** with no forward references.
+3. **Leave the project buildable.** The implementation skill enforces this — the design must make it achievable.
+4. **Trace to scenarios.** By the final step, every scenario is accounted for.
 
-### Step 6: Sequence the Build
+For each step, specify: what to build, which scenarios it addresses, what to test before moving on, and what must be in place from prior steps.
 
-Order the work so that each step builds on the previous one and produces something demonstrable. Front-load the core happy-path scenarios — get the basic flow working end-to-end before handling edge cases.
+### Step 6: Note Decisions and Open Questions
 
-### Step 7: Flag Questions and Risks
+Document judgment calls with reasoning ("chose SQLite because the spec describes a single-user tool"), assumptions that need confirmation ("assumed empty-cart checkout returns an error — confirm with spec"), and deferred concerns ("spec doesn't mention auth; would affect API design if added later"). Open questions are invitations for the developer to update the spec (using `spex-specify`) or confirm the assumption.
 
-Be explicit about what you're assuming, what you're punting on, and what might go wrong. This is not a sign of weakness in the design — it's a sign of honesty.
+## Resolving Conflicts
 
-## Principles
+- **Spec seems incomplete or contradictory:** flag it. Suggest a resolution, but the spec should be updated (using `spex-specify`) rather than the design silently interpreting ambiguity.
+- **Existing code fights the spec:** the spec wins. Include refactoring steps in the build sequence.
+- **Technology constraint makes a scenario impractical:** flag the tradeoff with options and a recommendation.
+- **Unsure about a decision:** write down the options, tradeoffs, and your recommendation. Let the developer decide. Don't get stuck seeking perfection — a documented decision beats an agonized-over one that blocks progress.
 
-**Every design decision should trace to a scenario.** If you can't point to a scenario that motivates a decision, you're either over-engineering or the spec is incomplete. Flag it either way.
+## Updating an Existing Design
 
-**Design for the scenarios you have, not the ones you imagine.** It's tempting to add abstractions "in case we need to support X later." Resist. Design for the spec as written. If X becomes a real scenario, the spec will be updated and the design will evolve.
+When the spec changes or implementation reveals a needed adjustment, update the design surgically. Re-read the current spec, identify impacted components and build steps, make the change, and flag downstream impacts to `spex-implement` and `spex-write-tests`.
 
-**Name things consistently with the spec.** If the spec says "cart", the design says "cart", the code says "cart". Don't introduce synonyms.
+## Output
 
-**Prefer simple over clever.** A straightforward design that's easy to understand and modify beats an elegant design that's hard to follow. The design will be read by future-you and by other developers. Optimize for their comprehension.
-
-**Be specific about boundaries.** "The frontend never computes prices" is a useful design statement. "Pricing logic is centralized" is not — it's too vague to enforce.
-
-## Output Format
-
-Produce the design as a single Markdown document. Use this skeleton:
-
-```markdown
-# Design: <Name of the Thing>
-
-## Summary
-
-<2-4 sentences>
-
-## Scenario Map
-
-### "<Scenario name from spec>"
-- **UI**: ...
-- **API**: ...
-- **Data**: ...
-- **Key logic**: ...
-
-<repeat for each scenario or scenario group>
-
-## Data Model
-
-### <Entity>
-- <fields, constraints, relationships>
-
-## Components
-
-### <ComponentName>
-<1-2 sentence responsibility statement>
-<key interfaces or methods if helpful>
-
-## Technology Choices
-
-| Choice | Rationale |
-|--------|-----------|
-| ...    | ...       |
-
-## Build Sequence
-
-### Step 1: <name>
-Build: ...
-Satisfies: ...
-Testable: ...
-
-## Open Questions
-
-- ...
-
-## Risks
-
-- ...
-```
-
-Save the design as `design.md` alongside the spec. The design should always reference the spec, and the spec should remain the authority on *what* the system does.
+A `design.md` containing: entity model, component breakdown (with scenarios each serves), technology choices with rationale, interface definitions, build sequence, and decisions/open questions. Favor concreteness — example payloads over schema descriptions, specific names over placeholders, one clear recommendation over an unprioritized list of options.

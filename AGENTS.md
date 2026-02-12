@@ -6,33 +6,35 @@
 - Human developers and agents collaborate on developing `design.md` files whose purpose is to provide step-by-step instructions that any developer or agent can follow to successfully implement the software in adherence with the spec.
 - Writing the application code that implements these designs is the primary job of agents.
 
-## The source-of-truth hierarchy
+## List of source files for a feature
+
+Features consist of the following files, listed here in order of their precedence.
 
 **Whenever there is doubt about a requirement or spec**, remember this hierarchy, from highest to lowest authority:
 
-### 1. **spec.md**
+### 1. spec.md
 
 The spec rules all, and is the source of truth for the design and tests.
 Use the `spex-specify` skill when editing spec.md files.
 
-### 2. **design.md**
+### 2. design.md
 
 Design docs are the source of truth for implementation guidance and certain details.
 Use the `spex-design` skill when editing design.md files.
 
-### 3. **Tests**
+### 3. Tests
 
-Use the `spex-test` skill when editing
+Use the `spex-write-tests` skill when adding or updating test coverage.
 
-4. **Reference implementations** or other resources are there to guide the implementation, but can be overridden by tests, design, or spec
-5. **details.md** should be thought of as part of the implementation; it stores all implementation details that do not belong in design.md, including things like runtime-specific considerations
-6. **The implementation itself** -- refer to the implementation itself so that patterns and idioms are consistent across the project, but always defer to tests, design, and spec
+### 4. Reference implementations (optional)
 
----
+These exist to guide the design, but can be overridden by tests, design, or spec.
 
-## You have skills available to you
+### 5. The implementation (source code)
 
-Read the filenames and/or YAML frontmatters in `.github/skills/*` to browse available skills.
+Use the `spex-implement` skill to write production code.
+
+Refer to the implementation itself so that patterns and idioms are consistent across the project, but always defer to tests, design, and spec.
 
 ---
 

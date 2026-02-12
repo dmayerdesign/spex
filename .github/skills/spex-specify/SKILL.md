@@ -3,183 +3,115 @@ name: spex-specify
 description: "Specify the software's behavior by listing scenarios written in given/when/then form, focused as much as possible on what an end user experiences. Use this skill when the user wants to define what a feature, system, or product should do before any code is written. Triggers include: requests to 'write a spec', 'define requirements', 'describe the behavior', 'list scenarios', 'write acceptance criteria', 'what should it do', or any task where the goal is to capture intended behavior rather than implement it. Also use when the user has a vague idea and needs help turning it into concrete, testable scenarios. Do NOT use for implementation, design, architecture, or test-writing — those are separate skills."
 ---
 
-# Specifying Software Behavior
+# Writing a Spec
 
 ## Overview
 
-A spec is a list of scenarios that describe what the software does from the perspective of someone using it. Each scenario follows the **given/when/then** structure. The spec is the single source of truth for what the software should do — design, implementation, and tests all trace back to it.
+The spec is the highest-precedence artifact in a spex project. The authority hierarchy is: **spec.md → design.md → tests → implementation**. Everything downstream — the design, the tests, the code — exists to serve what the spec describes. If any of them conflict with the spec, the spec wins.
 
-## What Makes a Good Spec
+A spec captures _what the software does_ from the perspective of someone using it. It is not a technical document. It doesn't name databases, frameworks, or components. It describes behaviors: what happens when a user does something, what they see, what changes, what goes wrong. The format is scenarios in **given/when/then** form.
 
-A spec is good when:
-- A non-technical stakeholder can read it and confirm "yes, that's what I want"
-- A developer can read it and know exactly what to build without guessing
-- A tester can read it and derive test cases directly from the scenarios
-- It says **what** happens, not **how** it's built
+## Before You Start
 
-A spec is bad when:
-- It describes internal mechanisms, database schemas, or API shapes
-- Scenarios are so vague they could mean multiple things
-- It mixes behavior with implementation ("the React component renders a div...")
-- It's a wall of prose instead of discrete, verifiable scenarios
+1. **Understand the user's intent.** What problem is the software solving? Who is using it? If the developer has a rough idea but not a clear picture, help them sharpen it before writing scenarios. Ask questions.
+2. **Identify the actors.** Who interacts with the system? Often it's just "the user," but there may be distinct roles (admin, guest, API consumer). Name them using the developer's language.
+3. **Identify the core nouns.** What are the things in the system? Carts, orders, documents, tasks, accounts. These become the vocabulary that flows through the entire project — design, tests, and code will all use these exact words.
+4. **Don't think about implementation.** The spec is deliberately technology-free. No databases, no endpoints, no frameworks. If you catch yourself writing "the API returns" or "the database stores," back up and describe what the user experiences instead.
 
-## Spec Structure
+## Scenario Format
 
-Every spec has three parts:
+Every behavior is captured as a scenario in given/when/then form:
 
-### 1. Preamble
-
-A short block (3-8 sentences) that establishes context. It answers:
-- What is this thing? (one sentence)
-- Who uses it and why? (one or two sentences)
-- What are the key constraints or boundaries? (if any)
-
-Keep it brief. The scenarios do the heavy lifting.
-
-```markdown
-## Preamble
-
-FreshCart is a grocery delivery app. Customers browse a catalog, add items
-to a cart, and check out for scheduled delivery. Orders can only be placed
-within delivery zones, and delivery windows are 2-hour blocks from 8am-8pm.
+```
+Scenario: Adding an item to an empty cart
+  Given the user has an empty cart
+  When they add a product to the cart
+  Then the cart contains one item
+  And the cart total reflects the product's price
 ```
 
-### 2. Scenarios
+**Given** establishes the starting state. **When** describes the action. **Then** describes the observable outcome. Each part should describe something a user could see or verify — not an internal system state.
 
-The heart of the spec. Each scenario is a single, concrete example of behavior. Use this format:
+Guidelines for good scenarios:
 
-```markdown
-### Scenario: <short descriptive name>
-
-**Given** <a starting state or precondition>
-**When** <the user does something or an event occurs>
-**Then** <the observable outcome>
-```
-
-Rules for scenarios:
-
-- **One behavior per scenario.** If you're writing "and then also..." you need a second scenario.
-- **Use concrete examples, not abstract rules.** Write `Given the cart contains "Organic Bananas" at $3.49` not `Given the cart contains an item with a price`. Concrete examples are easier to verify and harder to misinterpret.
-- **Stay at the user's level.** The user sees a confirmation message, not a 201 HTTP response. The user's balance updates, not a database row.
-- **Given = state, When = action, Then = outcome.** Don't sneak actions into Given or state into Then.
-- **Name scenarios descriptively.** `Adding an out-of-stock item` beats `Scenario 7`. The name should tell you what's interesting about this scenario without reading the body.
-
-Multiple Given/When/Then clauses are fine when they genuinely belong to one behavior:
-
-```markdown
-### Scenario: Applying a percentage discount code
-
-**Given** the cart contains "Sourdough Bread" at $6.00
-**And given** the cart contains "Oat Milk" at $4.50
-**When** the customer applies discount code "SAVE20"
-**Then** the cart total shows $8.40
-**And then** the discount line reads "SAVE20: -$2.10"
-```
-
-### 3. Open Questions
-
-Capture anything unresolved. This section prevents the spec from silently papering over ambiguity. Every question should be specific enough to have a concrete answer.
-
-```markdown
-## Open Questions
-
-- What happens if a delivery window fills up while the customer is checking out?
-- Should expired discount codes show an error message, or silently do nothing?
-- Is there a maximum cart size?
-```
+- **One behavior per scenario.** If a scenario has five "Then" clauses covering unrelated outcomes, it's probably multiple scenarios.
+- **Name scenarios descriptively.** The name should tell you what's being tested without reading the body. "Adding an item to an empty cart" is good. "Cart test 1" is not.
+- **Use concrete examples, not abstractions.** "Given the discount code is expired" is better than "given the discount code is in an invalid state." Specific cases are easier to verify and harder to misinterpret.
+- **Cover the sad paths.** For every happy-path scenario, ask: what could go wrong? What if the input is invalid? What if the thing doesn't exist? What if they don't have permission? Error scenarios are requirements too — they'll get their own tests and their own code paths.
+- **Stay at the user's level.** Describe what the user experiences, not what the system does internally. "Then the user sees an error message" rather than "then the system logs an exception and returns a 422."
 
 ## Workflow
 
-### Step 1: Understand the Intent
+### Step 1: Start with the Happy Path
 
-Before writing anything, make sure you understand what the user wants to specify. Ask clarifying questions if needed, but don't over-interview — it's often better to draft scenarios and let the user react to them than to ask 15 questions upfront.
+Write scenarios for the core thing the software does when everything goes right. This is usually obvious from the developer's description. If it's a todo app, the happy path is creating, completing, and listing tasks. If it's a checkout flow, it's adding items, applying discounts, and placing an order.
 
-Key things to clarify early:
-- Who are the users? (There may be more than one type.)
-- What's the core action or workflow?
-- Are there any hard constraints? (regulatory, performance, platform)
+Get the happy path scenarios written and reviewed before branching into edge cases. They establish the vocabulary and the shape of the system.
 
-### Step 2: Identify Scenario Groups
+### Step 2: Walk the Error Paths
 
-Organize scenarios into logical groups. Common groupings:
-- By workflow stage (browsing → cart → checkout → delivery)
-- By user role (customer, admin, driver)
-- By feature area (search, payments, notifications)
+For each happy-path scenario, ask what can go wrong:
 
-Within each group, cover:
-1. **The happy path** — the normal, expected flow
-2. **Edge cases** — boundaries, limits, empty states
-3. **Error cases** — what goes wrong and what the user sees
-4. **Permissions/access** — who can and can't do what
+- Invalid input (missing fields, wrong types, out-of-range values)
+- Missing or nonexistent things (item not found, user doesn't exist)
+- State conflicts (already completed, expired, duplicate)
+- Permission failures (not logged in, wrong role)
+- Boundary conditions (empty list, maximum exceeded, zero quantity)
 
-A useful heuristic: for every happy-path scenario, ask "what if it fails?" and "what if the input is weird?" Those usually produce 1-3 more scenarios.
+Each error condition that produces a distinct user-visible outcome gets its own scenario. Don't group them — "various validation errors" is not a scenario.
 
-### Step 3: Write Scenarios
+### Step 3: Find the Implicit Scenarios
 
-Write all scenarios using the format above. Aim for:
-- **Concrete over abstract.** Real example values, real names, real numbers.
-- **Independent scenarios.** Each should stand on its own. Don't write "Given the outcome of Scenario 3..."
-- **No implementation leakage.** If you catch yourself writing "the API returns" or "the database contains" or "the component renders", rewrite it from the user's perspective.
+Some behaviors aren't obvious from the developer's initial description but emerge when you think carefully:
 
-### Step 4: Review and Tighten
+- **What happens on revisit?** If a user leaves and comes back, what do they see? Is state preserved?
+- **What about sequences?** Does the order of actions matter? Can you do step 3 before step 2?
+- **What about multiples?** What if there are zero items? One? A hundred?
+- **What about concurrency?** Can two users affect the same thing? Does it matter?
 
-After drafting, review with these checks:
-- **Duplicate check:** Do any two scenarios test the same thing with trivially different inputs? Merge or cut.
-- **Gap check:** Walk through the workflow end-to-end. Are there decision points with no scenario?
-- **Clarity check:** Could someone misinterpret any scenario in a way that leads to wrong behavior? If yes, make it more specific.
-- **Scope check:** Has the spec silently expanded beyond what was asked for? Flag anything that feels like scope creep and ask the user.
+Don't invent requirements — but do ask the developer about gaps. If you spot an ambiguity, write it as an open question rather than silently resolving it.
 
-### Step 5: Document Open Questions
+### Step 4: Organize by Feature Area
 
-Be honest about what's unresolved. It's far better to have 5 open questions in the spec than to have 5 silent assumptions baked into the scenarios. If you had to make an assumption to write a scenario, call it out.
+Group scenarios under headings that match the natural divisions of the system. For a shopping app, that might be: Cart, Checkout, Discounts, Order History. These groupings often preview the component structure the design will use, but don't force architectural thinking — group by user-facing feature, not by technical boundary.
+
+Within each group, put happy-path scenarios first, then error scenarios. This makes the spec easy to scan.
+
+### Step 5: Review for Completeness and Consistency
+
+Before finalizing, check:
+
+- **Does every noun appear in at least one scenario?** If the developer mentioned "notifications" but no scenario exercises them, either add scenarios or confirm they're out of scope.
+- **Are the scenarios consistent?** If one scenario says the cart empties after checkout and another implies items persist, there's a contradiction. Resolve it.
+- **Is the vocabulary stable?** Don't call it "cart" in one scenario and "basket" in another. Pick one name and use it everywhere. This vocabulary will propagate through the entire project.
+- **Are the scenarios testable?** Every "Then" clause should be something an automated test could verify. "Then the user has a good experience" is not testable. "Then the dashboard shows the three most recent orders" is.
 
 ## Principles
 
-**Favor many small scenarios over few large ones.** A scenario with 8 "And then" clauses is really 4 scenarios pretending to be one. Split them.
+### The Spec Owns the Vocabulary
 
-**Scenarios are examples, not rules.** `Given the customer has ordered 3 times this month / When they place a 4th order / Then they receive a "Loyal Customer" badge` is better than a rule that says "customers who order 4+ times per month get a badge." The example is unambiguous; the rule invites questions (calendar month? rolling 30 days? what if they cancel one?).
+The names you use in the spec — for actors, entities, actions, and states — become the shared language of the project. The design (via `spex-design`) will carry them into component names. Tests (via `spex-write-tests`) will use them in test names and assertions. Code (via `spex-implement`) will use them in classes, functions, and variables. Choose clear, specific names and use them consistently.
 
-**Don't spec what you don't need.** If the user asked you to spec the checkout flow, don't also spec the account registration flow "for completeness." Stay focused. You can always add more scenarios later.
+### Scenarios Are Requirements
 
-**Name things from the user's vocabulary.** If the user says "cart", don't call it "basket" in the spec. If the user says "gig", don't call it "job." Matching vocabulary prevents a whole class of miscommunication.
+Every scenario is a promise about how the software behaves. The design must account for it. The tests must verify it. The code must implement it. Don't write scenarios casually — if it's in the spec, it's required.
 
-**Specs evolve.** The first draft is never the last. Write it, get feedback, revise. The structure here is designed to make that easy — you can add, remove, or rewrite individual scenarios without disturbing the rest.
+Conversely, if a behavior isn't in the spec, it's not required. The design shouldn't add features the spec doesn't describe, and the implementation shouldn't either. If new behavior is needed, it starts here, as a new scenario.
 
-## Output Format
+### Stay Technology-Free
 
-Produce the spec as a single Markdown document. Use this skeleton:
+The spec should be implementable in any language, framework, or architecture. Don't mention REST, SQL, React, or Redis. Describe the behavior, not the mechanism. The one exception is when the technology _is_ the requirement — "the CLI accepts a --verbose flag" is a spec-level concern because it's part of the user's experience.
 
-```markdown
-# <Name of the Thing Being Specified>
+### Prefer Precision Over Brevity
 
-## Preamble
+A scenario that's too specific is easy to generalize later. A scenario that's too vague will be interpreted differently by every reader. When in doubt, be concrete. "Given the user has three items in their cart totaling $45.00" is better than "given the user has items in their cart."
 
-<3-8 sentences of context>
+## Updating an Existing Spec
 
-## Scenarios
+When requirements change, update the spec first — before touching the design, tests, or code. Add, modify, or remove scenarios as needed. Then flag the changes so downstream artifacts can be updated: the design (using `spex-design`), the tests (using `spex-write-tests`), and the implementation (using `spex-implement`).
 
-### <Group Name> (optional grouping header)
+Don't leave stale scenarios in the spec. A scenario that no longer reflects intended behavior is worse than a missing scenario — it actively misleads.
 
-#### Scenario: <descriptive name>
+## Output
 
-**Given** ...
-**When** ...
-**Then** ...
-
-#### Scenario: <descriptive name>
-
-**Given** ...
-**When** ...
-**Then** ...
-
-### <Next Group>
-
-...
-
-## Open Questions
-
-- ...
-- ...
-```
-
-Save the spec as `spec.md` in the project root (or wherever the user indicates). This file is the canonical artifact — design, implementation, and tests should all reference it.
+A `spec.md` containing: a brief description of what the software does and who it's for, followed by scenarios grouped by feature area, in given/when/then form. Happy paths first, then error paths. Concrete, testable, technology-free, and using a consistent vocabulary throughout.
