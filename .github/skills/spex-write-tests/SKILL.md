@@ -1,6 +1,7 @@
 ---
 name: spex-write-tests
 description: "Add concise but thorough test coverage where needed, ensuring each test links back to one or more scenarios in the spec. Use this skill when the user wants to add, improve, or review tests for code that has a behavioral spec. Triggers include: 'write tests', 'add test coverage', 'test this', 'are there enough tests', 'cover these scenarios', or any request to verify that implemented code satisfies the spec's scenarios. Also use when the user asks to check which scenarios are untested or wants to understand the relationship between tests and spec. Do NOT use for writing specs (use spex-specify), creating designs (use spex-design), or implementing features (use spex-implement)."
+user-invokable: false
 ---
 
 # Writing Tests

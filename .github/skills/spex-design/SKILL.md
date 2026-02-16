@@ -1,6 +1,7 @@
 ---
 name: spex-design
 description: "Create a detailed plan for implementing the spec. Use this skill when a behavioral spec (scenarios in given/when/then form) already exists and the user wants to plan how to build it before writing code. Triggers include: 'design this', 'plan the implementation', 'how should we build this', 'create an architecture', 'what's the technical approach', or any request to bridge the gap between a spec and code. Also use when the user has a spec and asks about technology choices, component structure, data modeling, or sequencing of work. Do NOT use for writing the spec itself (use spex-specify), writing code (use spex-implement), or writing tests (use spex-write-tests)."
+user-invokable: false
 ---
 
 # Designing from a Spec

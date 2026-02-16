@@ -1,6 +1,7 @@
 ---
 name: spex-document-change
 description: "Document the change you just made in a changelog file"
+user-invokable: false
 ---
 
 1. Create a new markdown file in the `spec/changelog/` directory. Name the file using the format `YYYYMMDD-descriptive-title.md`, where `YYYYMMDD` is the current date and `descriptive-title` is a brief description of the change (use hyphens to separate words).

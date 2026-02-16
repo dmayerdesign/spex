@@ -1,6 +1,7 @@
 ---
 name: spex-specify
 description: "Specify the software's behavior by listing scenarios written in given/when/then form, focused as much as possible on what an end user experiences. Use this skill when the user wants to define what a feature, system, or product should do before any code is written. Triggers include: requests to 'write a spec', 'define requirements', 'describe the behavior', 'list scenarios', 'write acceptance criteria', 'what should it do', or any task where the goal is to capture intended behavior rather than implement it. Also use when the user has a vague idea and needs help turning it into concrete, testable scenarios. Do NOT use for implementation, design, architecture, or test-writing — those are separate skills."
+user-invokable: false
 ---
 
 # Writing a Spec

@@ -1,6 +1,7 @@
 ---
 name: spex-implement
 description: "Implement a new or existing design. Use this skill when a design document exists (or when the user provides enough context to imply one) and the user wants working code. Triggers include: 'build this', 'implement the design', 'write the code', 'start coding', 'create the project', or any request to produce working software from a plan. Also use when the user wants to implement a specific step from a build sequence, add a feature described in a design, or refactor code to match an updated design. Do NOT use for writing specs (use spex-specify), creating designs (use spex-design), or writing tests (use spex-write-tests)."
+user-invokable: false
 ---
 
 # Implementing a Design
