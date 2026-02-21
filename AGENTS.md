@@ -1,40 +1,130 @@
 # Instructions for agents
 
-## This is a spec-as-source project
+**Your main priority is to follow the "spec as source" workflow described below.**
 
-- Human developers, with the help of agents as desired, create one or more `spec.md` files that comprehensively describe the behavior of the software, focused on how end users experience its behavior.
-- Human developers and agents collaborate on developing `design.md` files whose purpose is to provide step-by-step instructions that any developer or agent can follow to successfully implement the software in adherence with the spec.
-- Writing the application code that implements these designs is the primary job of agents.
+---
 
-## List of source files for a feature
+# The `spex` methodology: markdown as source
 
-Features consist of the following files, listed here in order of their precedence.
+## Development workflow
 
-**Whenever there is doubt about a requirement or spec**, remember this hierarchy, from highest to lowest authority:
+You are working with a developer to build a production-ready application.
 
-### 1. spec.md
+### The developer's main responsibilities
 
-The spec rules all, and is the source of truth for the design and tests.
-Use the `spex-specify` skill when editing spec.md files.
+- Specify high-level requirements
+- Approve or veto high-level architecture decisions
+- Regularly test, verify, and report bugs manually
 
-### 2. design.md
+### The agent's responsibilities: everything else
 
-Design docs are the source of truth for implementation guidance and certain details.
-Use the `spex-design` skill when editing design.md files.
+- Help to flesh out accurate high-level specs when asked
+- Generate top-quality, idiomatic production code and tests
+- Ensure all documentation and code is generated with **ease of understanding and readability** in mind
+    - The developer needs to have an easy time understanding and updating implementation details
 
-### 3. Tests
+### Use the `spex-iterate` skill for most tasks
 
-Use the `spex-write-tests` skill when adding or updating test coverage.
+This ensures that we follow a consistent test-driven workflow, documenting our changes correctly as we go.
 
-### 4. Reference implementations (optional)
+### Guiding principals
 
-These exist to guide the design, but can be overridden by tests, design, or spec.
+- **Less is more**
+    - You must aim to be as economical as possible with the volume of documentation and code
+    - As a general rule, avoid stating the obvious; focus mostly on surprises and deviations from standard assumptions
+    - Only be redundant when doing so addresses a real ambiguity
+- **Always be considering the perspective of the application's end users**
+    - Only behavior that impacts the app's end-user experience need to be specified and tested
+- **Every test must tie directly back to a given/when/then scenario in the spec**
+- **By default, approach the application as a "plugin" architecture**
+    - The **application logic** is a state machine with side effects, and is the target of most unit tests
+    - The application logic defines abstract interfaces that the plugins implement
+    - Anything considered an "implementation detail" (relative to the application logic) is handled by these plugins
 
-### 5. The implementation (source code)
+### Project organization
 
-Use the `spex-implement` skill to write production code.
+Our source of truth in any given folder is the `spec/` folder.
+The `spec/` folder for a "to-do" app might look like this:
 
-Refer to the implementation itself so that patterns and idioms are consistent across the project, but always defer to tests, design, and spec.
+```
+spec/
+├—— features/
+│   ├── basic-todos/
+│   │   ├—— changes/
+│   │   │   └—— 2026-02-21-fix-styling-on-completed-todos/
+│   │   │       ├—— bug-report.md
+│   │   │       ├—— plan.md
+│   │   │       ├—— tasks.md
+│   │   │       └—— summary.md
+│   │   ├—— spec.md
+│   │   ├—— logic.md
+│   │   └—— details.md
+│   └── photo-uploads/
+│       ├—— spec.md
+│       ├—— logic.md
+│       └—— details.md
+├—— changes/
+│       2026-02-21-add-photo-uploads-feature/
+│       ├—— spec.md
+│       ├—— plan.md
+│       ├—— tasks.md
+│       └—— summary.md
+├—— resources/
+│   └—— brand-assets/
+│       └—— app-logo.png
+├—— spec.md
+├—— logic.md
+└—— details.md
+```
+
+#### `features/` are nested specs
+
+- Each feature has the same folder structure as this top-level `spec/` folder, minus `features/` (no deep nesting allowed here)
+    - changes/
+    - spec.md
+    - logic.md
+    - details.md
+
+#### `changes/` contain every change made to the code
+
+- Create a change whenever you are asked to iterate on a new deliverable chunk of work
+- Before creating a new change, always check whether it would be more appropriate to extend an existing change
+- If a change belongs to a specific feature, it should live inside that feature; if it reaches across multiple features, it can live in the top-level `changes/` folder
+
+#### `resources/` are there to help
+
+- Here you might find brand assets, reference implementations, or any non-source-code files to help in your implementation.
+
+### File-level division of responsibility
+
+All files must be considered on a continuum from _fully human-owned_ on one end to _fully agent-owned_ on the other.
+
+#### 1. `spec.md` files and `bug-report.md` are owned by the human
+
+- As an agent, you must never edit a file named `spec.md` or `bug-report.md` except when explicitly asked to by a human
+- A spec is a collection of scenarios (in "given/when/then" form) grouped by user workflow
+- Every scenario describes a **state transition** and its **side effects**
+
+#### 2. `logic.md` files are mostly owned by the human
+
+- As an agent, you must collaborate with the human developer to make sure this file describes every **state transition** and **side effect** possible in the application
+- DO NOT include code snippets; DO include pseudocode when appropriate
+
+#### 3. `details.md` files are mostly owned by you, the agent
+
+- As an agent, you must document any noteworthy implementation details, in collaboration with the human developer
+- Avoid over-specifying
+    - Use ranges and qualitative descriptions when possible
+    - Assume that well-known standards/conventions/idioms are implicitly understood and followed
+- DO NOT include extensive code snippets; DO include pseudocode when appropriate
+
+#### 4. All other documentation and code artifacts are owned by you, the agent
+
+- As an agent you have discretion to generate any files you need to efficiently and effectively implement the spec
+- Some options:
+    - **summary.md** -- every change should have a summary that includes any architectural or design decisions that were made during the course of implementation
+    - **plan.md** -- lay out a plan for how to attack a change
+    - **tasks.md** -- track your progress on a change
 
 ---
 
