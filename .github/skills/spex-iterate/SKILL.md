@@ -13,14 +13,6 @@ Iterate on the application until:
 - There are 0 compiler errors and the entire project builds
 - All tests pass
 
-## Before beginning to iterate, make sure you fully understand what is required
-
-1. **Identify the scope.** Don't try to build everything at once. If no plan exists, create one.
-2. **Understand the spec.** If there is a spec.md, read it. If there isn't, ask the developer to write one first.
-3. **Understand the logic.** If there is a logic.md, read it. If there isn't, ask the developer to write one first. This will detail the state transitions and side effects that the test needs to worry about.
-4. **Understand the existing tests, if any.** If there's an existing test suite, understand its structure, conventions, and coverage before adding to it. Match the existing style and organization, unless it becomes inconvenient.
-5. **Understand the existing implementation, if any.**
-
 ## How to approach the TDD workflow
 
 - Tests translate the spec's scenarios into executable verification
@@ -52,11 +44,24 @@ Iterate on the application until:
 - Don't refactor while implementing. If you notice something that should be refactored, note it but keep it separate from the feature implementation. Mixing refactoring with new features makes both harder to verify.
 - Respect existing boundaries. If the codebase has a clear separation between modules, maintain that separation.
 
-## Output
+## Your workflow, step by step:
 
-Implementation produces working, tested code files organized in the project structure. After implementing, make sure:
+### Before beginning to iterate, make sure you fully understand what is required
 
-- The project builds without errors
-- All tests pass (both new and pre-existing)
-- The implemented scenarios work when manually verified
-- Files are saved to the appropriate project directory
+1. **Identify the scope.** Don't try to build everything at once. If no plan exists, create one.
+2. **Understand the spec.** If there is a spec.md, read it. If there isn't, ask the developer to write one first.
+3. **Understand the logic.** If there is a logic.md, read it. If there isn't, ask the developer to write one first. This will detail the state transitions and side effects that the test needs to worry about.
+4. **Understand the existing tests, if any.** If there's an existing test suite, understand its structure, conventions, and coverage before adding to it. Match the existing style and organization, unless it becomes inconvenient.
+5. **Understand the existing implementation, if any.**
+
+### The feature or fix being implemented must be represented as a change in **`changes/`**
+
+A feature or fix might have been reported ad-hoc by the user in the current conversation, or it might be a step in a **`plan.md`** file.
+
+1. Create a change in the **`changes/`** folder, or extend an existing change if that is more appropriate
+    - If a change belongs to a specific feature, it should live inside that feature; if it reaches across multiple features, it can live in the top-level `changes/` folder
+2. Develop a **`plan.md`** to outline how you will approach the work
+3. Develop a **`tasks.md`** to break down the work into manageable pieces and track your progress
+4. Implement the code by going task-by-task, following the TDD workflow outlined above
+5. When finished, generate a **`summary.md`** that summarizes the change, including any architectural or design decisions that were made during the course of implementation
+6. Check to make sure files were all generated as expected, and that the project builds without errors
